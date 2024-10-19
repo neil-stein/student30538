@@ -1,0 +1,528 @@
+---
+title: "PSet 2"
+author: "Neil Stein"
+format: html
+---
+
+
+"This submission is my work alone and complies with the 30538 Integrity Policy" **NS**
+
+"I have uploaded the names of anyone I worked with on the problem set here" **Mitch Bobbin**
+
+```{python}
+import pandas as pd
+import altair as alt
+import time
+
+import warnings 
+warnings.filterwarnings('ignore')
+```
+
+## Data cleaning continued (15 points)
+
+1.  
+
+```{python}
+import pandas as pd
+
+parking_data = pd.read_csv("parking_tickets_one_percent.csv")
+
+# creating the function for counting NA rows
+
+def na_counter(df):
+  na_totals = df.isna().sum()
+  na_df = pd.DataFrame({'Variable': na_totals.index, 'NA_Count': na_totals.values})
+  return na_df
+
+# running the function
+
+na_sum = na_counter(parking_data)
+print(na_sum.head(10))
+```
+
+Testing our function by checking the na_sum.head(10) showed us that there are NA values in some columns and not others, I am presuming that the whole dataset looks good. I would be curious to see if there are ever instances of consistently missing information (e.g. ticketing agents consistently fail to collect license plate numbers and addresses where the ticket is written)
+
+2.  
+
+```{python}
+# code-based approach below, could also just open the "na_sum" dataframe from the previous problem and look at it
+
+non_zerodf = na_sum[na_sum["NA_Count"] != 0]
+print(non_zerodf)
+
+```
+
+initially looking at the data from the previous problem it was clear that most of the variables did not have NA values, so it was fastest to put together a quick subset to look at these values. The three most largest NA value counts are: hearing_disposition (259,899), notice_level (84,068), and zipcode (54,115), all of which occur thousands of times whereas the other NA value counts are relatively small. The data dictionary (link: https://github.com/propublica/il-ticket-loader#data-dictionary) explains that hearing_disposition is left blank (i.e. NA) if the ticket is not contested, which appears to be the case for \~90.4% of all the tickets issued. Similarly, the dictionary notes that for notice_level if there was no notice sent to the individual this field is left blank, to which it is important to note that if the driver pays within the alloted payment window there is no notice sent about their ticket. The reasoning for zipcode being NA is unclear from the data dictionary, perhaps it is difficult for the ticketing agent to keep track of their local zipcode whereas the address or intersection where the ticket is issued is immediately visible when they are issuing the ticket.
+
+3.  
+
+```{python}
+import pandas as pd
+import altair as alt
+
+# finding the official violation name
+unique_viol = parking_data["violation_description"].unique()
+print(unique_viol)
+
+# the violations related to stickers were found by looking at the readout from running the code above and used to filter the df
+
+sticker_viol = ["NO CITY STICKER OR IMPROPER DISPLAY","IMPROPER DISPLAY OF CITY STICKER","NO CITY STICKER VEHICLE UNDER/EQUAL TO 16,000 LBS.","NO CITY STICKER VEHICLE OVER 16,000 LBS."]
+sticker_df = parking_data[parking_data["violation_description"].isin(sticker_viol)]
+
+print(sticker_df.head(3))
+
+# now that the printing confirms our filtration works, we can use it to determine which codes are old vs. new. In the DataFrame we can see that the earliest violation when sorted is termed "NO CITY STICKER OR IMPROPER DISPLAY", so we can use that to find when this term went out of use and what it was replaced with:
+
+initial_term = "NO CITY STICKER OR IMPROPER DISPLAY"
+sticker_df["issue_date"] = pd.to_datetime(sticker_df["issue_date"])
+
+filtered_stickers = sticker_df[sticker_df["violation_description"] == initial_term]
+last_occurrence_date = filtered_stickers["issue_date"].max()
+
+print("Last occurrence of the old violation term,",initial_term,", occured at", last_occurrence_date,". the new terms, ", sticker_viol, ", began afterwards, though it should be noted that 'NO CITY STICKER VEHICLE OVER 16,000 LBS.' was in use prior to then as well" )
+```
+
+after establishing when to look, we can look in the dataframe to find what the initial term is in the violation_code for this term, which is "0964125", after the timestamp indicated in the printout above the violation_code column value becomes "0964125B"
+
+4.  
+
+```{python}
+import pandas as pd
+
+# used ChatGPT to simplify from my original code, which contained unnecessary steps for this level of answering the core question. the "drop_duplicates()" function in particular was something I learned from asking the site to help me!
+
+# Clean the data
+sticker_df["violation_description"] = sticker_df["violation_description"].str.strip().str.lower()
+sticker_df["fine_level1_amount"] = pd.to_numeric(sticker_df["fine_level1_amount"], errors= "coerce")
+
+# Find all pairings (regardless of uniqueness)
+all_pairings = sticker_df[["violation_description", "fine_level1_amount"]].drop_duplicates()
+
+# Print the unique pairings
+print(all_pairings)
+```
+
+Looking at the output, and considering the progression of the code violation terminology discussed in the previous question, we can see that the fine amount was \$120 initially, changing to \$200 following the change in terminology. On the other hand, the over 16,000 lbs. vehicles appear to have retained the same fine level throughout the history in this data set!
+
+## Revenue increase from "missing city sticker" tickets (20 Points)
+
+1.  
+
+```{python}
+import pandas as pd
+import altair as alt
+
+# creating a new combined code violation value
+sticker_df["merged_viol_code"] = sticker_df["violation_code"].apply(lambda x: "0964125X" if x in ["0964125", "0964125B"] else x)
+
+# checking the number of unpaid city sticker violations by month
+# month value
+sticker_df["issue_month"] = sticker_df["issue_date"].dt.to_period("M")
+# missing value -- I interpret this to mean that ALL non-paid outcomes should be considered missing, this may not be entirely true but the data dictionary does not help me with this question
+sticker_df["paid_check"] = sticker_df["ticket_queue"].apply(lambda x: 1 if x == "Paid" else 0)
+
+viol_grouped = sticker_df.groupby(["merged_viol_code", "issue_month", "paid_check"]).size().reset_index(name="count")
+
+# charting with Altair the number of tickets over time
+viol_grouped_unpaid = viol_grouped[viol_grouped["paid_check"] == 0]
+viol_grouped_unpaid["issue_month"] = viol_grouped_unpaid["issue_month"].astype(str)
+
+m_chart = alt.Chart(viol_grouped_unpaid).mark_line().encode(
+    x=alt.X("issue_month", title="Issuance Month"),
+    y=alt.Y("count", title= "Number of Unpaid Tickets"),
+    color=alt.Color("merged_viol_code", title= "Violation Code"),
+    tooltip=["issue_month", "merged_viol_code", "count"]
+).properties(
+    title='Number of Unpaid Tickets by Violation Code and Month',
+).interactive()
+
+m_chart.show()
+
+
+# note -- the resulting chart is too wide to be particularly useful, though this is exactly what the assignment is asking for by specifying months. A better version would be smoothing out the data by quarter or longer to show the trend more effectively. I am doing the example below based on Quarter:
+
+viol_grouped_unpaid["issue_month"] = pd.to_datetime(viol_grouped_unpaid["issue_month"])
+viol_grouped_unpaid["issue_quarter"] = viol_grouped_unpaid["issue_month"].dt.to_period('Q')
+viol_grouped_Q = viol_grouped_unpaid.groupby(["merged_viol_code", "issue_quarter"]).agg({"count": "sum"}).reset_index()
+
+viol_grouped_Q["issue_quarter"] = viol_grouped_Q["issue_quarter"].astype(str)
+
+
+q_chart = alt.Chart(viol_grouped_Q).mark_line().encode(
+    x=alt.X("issue_quarter", title="Issuance Quarter"),
+    y=alt.Y("count", title= "Number of Unpaid Tickets"),
+    color=alt.Color("merged_viol_code", title= "Violation Code"),
+    tooltip=["issue_quarter", "merged_viol_code", "count"]
+).properties(
+    title='Number of Unpaid Tickets by Violation Code and Quarter',
+).interactive()
+
+q_chart.show()
+```
+
+2.  
+
+```{python}
+import pandas as pd
+import altair as alt
+
+# As highlighted in the previous section, I am electing to use the quarterly data over the monthly data for the sake of visual clarity. As found in part 1, question 3, the date of the change occured on "2012-02-24 13:50:00", which I will pull into this problem
+
+# data cleaning
+viol_group_qtwo = viol_grouped_unpaid.groupby(["merged_viol_code", "issue_quarter"]).agg({"count": "sum"}).reset_index()
+viol_group_qtwo["issue_quarter"] = viol_group_qtwo["issue_quarter"].dt.to_timestamp()
+```
+
+Next, creating a mostly empty chart and merging the two into one display - credit to Gemini (Google's AI) for the idea to take this approach, this is probably not the most efficient way to do this but I couldn't find anything else in the Altair guidance material that would indicate a more efficient approach:
+
+```{python}
+# chart with our vertical bar -- note that DateFrame is empty here, this is just a placeholder!
+reference_line = alt.Chart(pd.DataFrame({"date": ["2012-02-24"]})).mark_rule(color= "red").encode(
+    x= "yearmonth(date):T"
+)
+
+# chart with our full data and bar included
+q_chart = alt.Chart(viol_group_qtwo).mark_line().encode(
+    x=alt.X("issue_quarter", title="Issuance Quarter"),
+    y=alt.Y("count", title= "Number of Unpaid Tickets"),
+    color=alt.Color("merged_viol_code", title= "Violation Code"),
+    tooltip=["issue_quarter", "merged_viol_code", "count"]
+).properties(
+    title= "Number of Unpaid Tickets by Violation Code and Quarter",
+).interactive() + reference_line
+
+q_chart.show()
+```
+
+3.  
+
+```{python}
+import pandas as pd
+
+# split the data set into one that contains ONE YEAR pre-cost change and ONE YEAR post-change. As found in part 1, question 3, the date of the change occured on "2012-02-24 13:50:00", which I will pull into this problem
+
+cutoff_date = "2012-02-24 13:50:00"
+cutoff_date = pd.to_datetime(cutoff_date)
+
+start_date = cutoff_date - pd.DateOffset(years = 1)
+end_date = cutoff_date + pd.DateOffset(years = 1)
+
+year_window = sticker_df[(sticker_df["issue_date"] >= start_date) & (sticker_df["issue_date"] <= end_date)]
+
+# total revenue generation, based on the assumptions listed in the prompt
+year_before = year_window[year_window["issue_date"] < cutoff_date]["fine_level1_amount"].sum()
+year_after = year_window[year_window["issue_date"] >= cutoff_date]["fine_level1_amount"].sum()
+
+total_before = year_before*(100) # Note -- we are multiplying this value by 100 since this dataset is a 1% sample of the overall population
+total_after = year_after*(100)
+
+print(f"The total revenue generation prior to the price change date was: $ {total_before:,}, the revenue generated after the price change date was: ${total_after:,}")
+```
+
+It is very important that we consider the change before and after the increase in the fine, assuming that the fact the cost was going up was well-advertisted, it is very reasonable to assume that drivers would behave differently after implementation of the fine! However we are ignoring it per the prompt's instruction
+
+4.  
+
+```{python}
+import pandas as pd
+
+# In section 2, problem 1 a column was already created to check if payment had been recieved on a ticket so there is no need to replicate that effort here
+
+tickets_before_df = year_window[year_window["issue_date"] < cutoff_date]
+tickets_after_df = year_window[year_window["issue_date"] >= cutoff_date]
+
+frac_paid_before = (((tickets_before_df["paid_check"] == 1).sum())/(len(tickets_before_df["paid_check"])))*100
+frac_paid_after = (((tickets_after_df["paid_check"] == 1).sum())/(len(tickets_after_df["paid_check"])))*100
+
+changed_revenue =  ((tickets_before_df["violation_code"] == "0964125").sum())*200*(frac_paid_after/100)*100 # 100 here indicates that this is a 1% sample of the total ticketing population
+
+print(f"prior to the price increase, {frac_paid_before:.2f}% had paid their tickets. Following the price increase, {frac_paid_after:.2f}% had paid their tickets. If the new repayment rates had applied without a change in the number of tickets, the revenue would have been ${changed_revenue:,}, slightly different from the City Clerk's estimate of $16 million")
+```
+
+5.  
+
+```{python}
+import pandas as pd
+import altair as alt
+
+# there is no preferred timeunit specified for this analysis by the prompt, so I will interpet this as being monthly, looking in the year before and year after (+/- 12 months) of the ticket cost change
+
+rate_paid = year_window.groupby("issue_month")["paid_check"].mean().reset_index()
+rate_paid["issue_month"] = rate_paid["issue_month"].astype(str)
+
+
+# charting the same way as in section 2, part 2
+
+vert_line = alt.Chart(pd.DataFrame({'date': ['2012-02-24']})).mark_rule(color='red').encode(
+    x='yearmonth(date):T'
+)
+
+y_chart = alt.Chart(rate_paid).mark_line().encode(
+    x=alt.X("issue_month:T", title="Issuance Month"),
+    y=alt.Y("paid_check", title= "Rate of Unpaid Tickets"),
+    tooltip=["issue_month","paid_check"]
+).properties(
+    title= "Rate of Unpaid Tickets by Month",
+).interactive() + vert_line
+
+y_chart.show()
+```
+
+Looking at the chart for the year time slice before and after the update in price, we can see that despite some seasonal variation in the payment rate, there is a steady downwards direction to the trendline. We would want to ideally run a multi-year linear regression to confirm this trend being significant and not just a product of specific economic difficulties within this timeslice, but overall we can interpret this as being an indicator that the increase in price impacted the payment rate of the tickets.
+
+6.  
+
+```{python}
+import pandas as pd
+import altair as alt
+
+# Per the prompt, we shall assume no changes in behavior of the city population in regards to the ticket price changes.
+
+# first, figure out payment rates for all ticket types
+
+parking_data["paid_check"] = parking_data["ticket_queue"].apply(lambda x: 1 if x == "Paid" else 0)
+
+# next, group and rearrange the data
+
+price_hike_df = parking_data.groupby("violation_description").agg(
+    paid_count= ("paid_check", lambda x: (x == 1).sum()),
+    unpaid_count= ("paid_check", lambda x: (x == 0).sum()),
+    total_tickets= ("paid_check", "count"),
+    fine_value= ("fine_level1_amount", "first")
+).reset_index()
+
+price_hike_df["payment_rate"] = price_hike_df["paid_count"] / price_hike_df["total_tickets"]
+
+price_hike_df["total_cost"] = price_hike_df["total_tickets"] * price_hike_df["payment_rate"]* price_hike_df["fine_value"]*100 #the 100 here is accounting for the fact that this is a 1% sample of the overall city total
+
+top_3_violations = price_hike_df.nlargest(3, "total_cost")
+
+print(top_3_violations[["violation_description", "total_cost"]])
+
+# next, chart out to see the overall trend in ticket issuance, confirm the the head findings! I am going back to the original, ungrouped data and checking the trend of these types of violations through time to confirm that they are trending towards continuing to be relevant in future years
+
+top_violations = ["EXPIRED PLATES OR TEMPORARY REGISTRATION","STREET CLEANING", "NO CITY STICKER VEHICLE UNDER/EQUAL TO 16,000 LBS."]
+
+top_price_hike = parking_data[parking_data["violation_description"].isin(top_violations)]
+
+top_price_hike["issue_date"] = pd.to_datetime(top_price_hike["issue_date"])
+
+top_three_price_hike = top_price_hike.groupby([pd.Grouper(key="issue_date", freq="Y"), "violation_description"]).size().reset_index(name="count")
+
+trend_chart = alt.Chart(top_three_price_hike).mark_line().encode(
+    x= alt.X("year(issue_date):T", title= "Year"),
+    y= alt.Y("count", title= "Total Tickets"),
+    color= "violation_description",
+    tooltip= ["year(issue_date):T", "count", "violation_description"]
+).properties(
+    title= "Occurance of Target Violation Descriptions Over Time"
+)
+
+trend_chart.show()
+
+```
+
+Based off of the chart, we can see that the rate of this ticket being issued is continuing to grow consistently through the past few years, so we can feel comfortable with focusing on generating more revenue from this type of ticket being increased in fine amount. There was the possibility with the initial version of this calculation that the violations that were currently generating revenue would not be trending consistently in the future, you could imagine a scenario where shifts in behavior over the past few years would lead to change in the frequency of the relevance of this type of ticket being issued. However, this chart's trends confirm for us that these top 3 fines are likely to still be issued at high levels in the future. If there are strategic responses to the increased cost, the city could consider redoubling its efforts to provide payment plans and other mechanisms to ensure that individuals comply with the fine system.
+
+## Headlines and sub-messages (20 points)
+
+1.  
+
+```{python}
+import pandas as pd
+
+# coincidentally, the price_hike_df I created in the previous block (section 2, question 6) covers most of the process that is detailed in this prompt. I will continue with the parts not covered by the previous section rather than repeating the same code.
+
+price_hike_df["total_tickets"] = pd.to_numeric(price_hike_df["total_tickets"])
+
+repayment_decline_df = price_hike_df[["violation_description", "payment_rate","fine_value","total_tickets"]].sort_values("total_tickets", ascending=False)
+
+print(repayment_decline_df.head(5))
+
+```
+
+2.  
+
+```{python}
+import pandas as pd
+import altair as alt
+
+# subset to only >= 100 violation occurances, using the df from the previous problem since it has all the data we need
+
+fine_payment_df = repayment_decline_df[repayment_decline_df["total_tickets"] >= 100]
+
+# scatter plot relating fine amount and payment rate
+
+fine_scatter = alt.Chart(fine_payment_df).mark_circle().encode(
+    x= alt.X("fine_value", title= "Cost of Fine/Violation"),
+    y= alt.Y("payment_rate", title= "Payment Rate"),
+    tooltip= ["violation_description", "fine_value", "payment_rate"]
+).properties(
+    title= "Scatter Plot of Payment Rate vs. Fine Value"
+).interactive()
+
+fine_scatter.show()
+
+# after running this chart the first time, I noticed there is an extreme x-value around 500 and everything else is far lower, so I will set a new maximum to the domain of this chart
+
+fine_scatter_two = alt.Chart(fine_payment_df).mark_circle().encode(
+    x= alt.X("fine_value", title= "Cost of Fine/Violation", scale=alt.Scale(domain=[0, 225])),
+    y= alt.Y("payment_rate", title= "Payment Rate"),
+    tooltip= ["violation_description", "fine_value", "payment_rate"]
+).properties(
+    title= "Scatter Plot of Payment Rate vs. Fine Value"
+).interactive()
+
+fine_scatter_two.show()
+
+# other scatter-plot styles: color-coding based on total tickets
+
+scatter_totals = alt.Chart(fine_payment_df).mark_circle().encode(
+    x= alt.X("fine_value", title= "Cost of Fine/Violation", scale=alt.Scale(domain=[0, 225])),
+    y= alt.Y("payment_rate", title= "Payment Rate"),
+    tooltip =["violation_description", "fine_value", "payment_rate"],
+    color = alt.Color("total_tickets").scale(scheme= "goldgreen")
+).properties(
+    title= "Scatter Plot of Payment Rate vs. Fine Value"
+).interactive()
+
+scatter_totals.show()
+
+# other plot styles: box plot
+
+boxed_totals = alt.Chart(fine_payment_df).mark_boxplot().encode(
+    x= alt.X("fine_value", title= "Cost of Fine/Violation", scale=alt.Scale(domain=[0, 225])),
+    y= alt.Y("payment_rate", title= "Payment Rate"),
+    tooltip= ["violation_description", "Q1:Q", "Q3:Q", "median:Q"]
+).properties(
+    title= "BoxPlot Relating Distribution of Payment Rate vs. Fine Value"
+).interactive()
+
+boxed_totals.show()
+
+# QQQ headlines and sub-messages!!!
+
+```
+
+3.  
+
+Among the charts I made, the most effective for communicating the message without a good sense of linear regressions is the colored scatter plot (titled: "Scatter Plot of Payment Rate vs. Fine Value"). The reasoning for this is that the color scheme and the interactive nature of the chart allows for a City Clerk to easily see that the most frequently paid types are the lower cost violations. The Clerk could also mouse-over the interactive chart and see the types of violations that are most frequently being paid, all without mentioning linear regressions and scaring them away!
+
+## Understanding the structure of the data and summarizing it (Lecture 5, 20 Points)
+
+1.  
+
+```{python}
+import pandas as pd
+
+# filtering for only the 100+ iterations violations
+violation_counts = parking_data.groupby("violation_description").size()
+
+hundred_parking_data = parking_data[parking_data["violation_description"].isin(violation_counts[violation_counts > 100].index)]
+
+# finding our non-doubled fine values
+non_doubles = hundred_parking_data.groupby("violation_description").filter(
+    lambda x: ~(x["fine_level2_amount"] == 2 * x["fine_level1_amount"]).all()
+)
+
+print(non_doubles["violation_description"].unique())
+
+non_doubles_list = non_doubles["violation_description"].unique()
+
+# now with our list, we find the fine values associated with these
+
+nondoubles_filtered = parking_data[parking_data["violation_description"].isin(non_doubles_list)]
+
+grouped_non_doubles = non_doubles.groupby("violation_description")[["fine_level1_amount", "fine_level2_amount"]].mean().reset_index()
+
+print(grouped_non_doubles)
+
+# I changed to calculating the mean since I realised the fine value is not consistent when I was reading through the dataframe!
+
+```
+
+2.  
+
+```{python}
+import pandas as pd
+import altair as alt
+import matplotlib.pyplot as plt
+
+# based on the prompt, I will be making a Sankey diagram. However, Altair does not support Sankey diagrams per my desktop research, so I will be using Flourish. Data cleaning for that diagram will be done in Python however!
+
+# cleaning data and handling NA values
+chart_cleaning = parking_data
+chart_cleaning["notice_level"] = chart_cleaning["notice_level"].fillna("PAID")
+chart_cleaning["hearing_disposition"] = chart_cleaning["hearing_disposition"].fillna("Unchallenged")
+
+# generating numbers for the notice_level Sankey diagram
+notice_grouping = chart_cleaning.groupby("notice_level").size()
+print(notice_grouping)
+
+notice_fine_grouping = chart_cleaning.groupby(["notice_level", "hearing_disposition"]).size()
+print(notice_fine_grouping)
+
+queue_grouping = chart_cleaning.groupby(["hearing_disposition", "ticket_queue"]).size()
+print(queue_grouping)
+
+# chatGPT recommended that I use matplotlib in order to bring the image I produced into the knitted PDF, here is that code:
+
+sankey_image = plt.imread("Chicago Parking.png")
+plt.imshow(sankey_image)
+plt.show()
+
+# interactive version online here - https://public.flourish.studio/visualisation/19857714/
+
+sankey_image_V2 = plt.imread("Chicago_Parking_V2.png")
+plt.imshow(sankey_image_V2)
+plt.show()
+
+# interactive version online here - https://public.flourish.studio/visualisation/19872738/
+```
+
+In the second image I highlighted the outcome for someone contesting their ticket and being found not liable, their tickets primarily ends up with a dismissed outcome (17,821), with a few (50) being still paid. Interestingly, of the outcomes tracked here 9,688 challenged tickets were still found liable, with 17,871 being found not liable. This means that if you contest the ticket you have \~65% chance of getting it dismissed! Assumingly there are selection biases present, i.e. you would want to challenge a ticket you think is unjust, but still, this is a good data point for citizens to know.
+
+3.  
+
+```{python}
+import pandas as pd
+import altair as alt
+
+# revising our scatter plot with labels
+
+label_scatter = alt.Chart(fine_payment_df).mark_text(align= "center").encode(
+    x=alt.X("fine_value", title="Cost of Fine/Violation", scale=alt.Scale(domain=[0, 225])),
+    y=alt.Y("payment_rate", title="Payment Rate"),
+    text= "violation_description",
+)
+
+just_scatter = alt.Chart(fine_payment_df).mark_point(opacity=0).encode(
+    x= "fine_value",
+    y= "payment_rate"
+)
+
+re_fine_scatter = just_scatter + label_scatter
+re_fine_scatter.show()
+
+# as stated in the prompt, this is unweildy. Revising to only be the top ten and other below
+
+top_ten= fine_payment_df["violation_description"].head(10).tolist()
+top_fine_df = fine_payment_df.copy()
+top_fine_df["violation_description"] = top_fine_df["violation_description"].apply(lambda x: x if x in top_ten else "other")
+
+# re-charting with this new labeling
+
+label_scatter_V2 = alt.Chart(top_fine_df).mark_text(align= "center").encode(
+    x=alt.X("fine_value", title="Cost of Fine/Violation", scale=alt.Scale(domain=[0, 225])),
+    y=alt.Y("payment_rate", title="Payment Rate"),
+    text= "violation_description",
+)
+
+just_scatter_V2 = alt.Chart(top_fine_df).mark_point(opacity=0).encode(
+    x= "fine_value",
+    y= "payment_rate"
+)
+
+re_fine_scatter_V2 = just_scatter_V2 + label_scatter_V2
+re_fine_scatter_V2.show()
+```
