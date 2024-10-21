@@ -68,7 +68,7 @@
         "2. How does neomycin compare to other antibiotics, such as streptomycin and penicillin?\n",
         "3. For which types of bacteria are neomycin and penicillin effective?\n"
       ],
-      "id": "04331b63"
+      "id": "ac676919"
     },
     {
       "cell_type": "code",
@@ -77,7 +77,7 @@
         "import pandas as pd\n",
         "import altair as alt"
       ],
-      "id": "83e0b056",
+      "id": "14f8227b",
       "execution_count": null,
       "outputs": []
     },
@@ -89,7 +89,7 @@
         "antibiotics = 'https://cdn.jsdelivr.net/npm/vega-datasets@1/data/burtin.json'\n",
         "pd.read_json(antibiotics)"
       ],
-      "id": "5543a6f1",
+      "id": "37180e82",
       "execution_count": null,
       "outputs": []
     },
@@ -100,7 +100,7 @@
         "#| echo: false\n",
         "antibiotics = pd.read_json('data/burtin.json')"
       ],
-      "id": "e9853b54",
+      "id": "e41b01da",
       "execution_count": null,
       "outputs": []
     },
@@ -110,7 +110,7 @@
       "source": [
         "antibiotics[['Bacteria', 'Penicillin', 'Streptomycin', 'Neomycin']].head()"
       ],
-      "id": "41c26dfe",
+      "id": "f4677ad2",
       "execution_count": null,
       "outputs": []
     },
@@ -138,7 +138,7 @@
         "\n",
         "Default scale is linear"
       ],
-      "id": "6d76b9d3"
+      "id": "9c491637"
     },
     {
       "cell_type": "code",
@@ -148,7 +148,7 @@
         "    alt.X('Neomycin:Q')\n",
         ")"
       ],
-      "id": "943acde0",
+      "id": "21920b92",
       "execution_count": null,
       "outputs": []
     },
@@ -161,7 +161,7 @@
         "\n",
         "## alt scale I"
       ],
-      "id": "778319eb"
+      "id": "d22d664e"
     },
     {
       "cell_type": "code",
@@ -172,7 +172,7 @@
         "          scale=alt.Scale(type='sqrt'))\n",
         ")"
       ],
-      "id": "7bf37955",
+      "id": "935f607c",
       "execution_count": null,
       "outputs": []
     },
@@ -182,7 +182,7 @@
       "source": [
         "## alt scale II"
       ],
-      "id": "8d0c38cf"
+      "id": "4581b04a"
     },
     {
       "cell_type": "code",
@@ -193,7 +193,7 @@
         "          scale=alt.Scale(type='log'))\n",
         ")"
       ],
-      "id": "431c7d3d",
+      "id": "dcc9c6d8",
       "execution_count": null,
       "outputs": []
     },
@@ -210,7 +210,7 @@
         "* Lower dosages indicate higher effectiveness. However, many readers will expect values that are \"better\" to be \"up and to the right\" within a chart. \n",
         "* If we want to cater to this convention set the encoding `sort` property to `'descending'`:\n"
       ],
-      "id": "e4b728fd"
+      "id": "6f731e79"
     },
     {
       "cell_type": "code",
@@ -222,7 +222,7 @@
         "          scale=alt.Scale(type='log'))\n",
         ")"
       ],
-      "id": "6b8d0189",
+      "id": "203de4a1",
       "execution_count": null,
       "outputs": []
     },
@@ -232,7 +232,7 @@
       "source": [
         "## add a clarifying title"
       ],
-      "id": "053e92e9"
+      "id": "f90f69f0"
     },
     {
       "cell_type": "code",
@@ -245,7 +245,7 @@
         "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →')\n",
         ")"
       ],
-      "id": "0842452a",
+      "id": "757cbf24",
       "execution_count": null,
       "outputs": []
     },
@@ -264,7 +264,7 @@
         "\n",
         "Question for the class: what does each point repesent?\n"
       ],
-      "id": "4bdfd753"
+      "id": "c67b010d"
     },
     {
       "cell_type": "code",
@@ -281,7 +281,7 @@
         "          title='← Less effective --- Streptomycin MIC (μg/ml) --- more effective →')\n",
         ")"
       ],
-      "id": "d7076e30",
+      "id": "bf170bd5",
       "execution_count": null,
       "outputs": []
     },
@@ -295,7 +295,7 @@
         "\n",
         "_How does neomycin compare to penicillin?_\n"
       ],
-      "id": "e35df7ac"
+      "id": "966db5e0"
     },
     {
       "cell_type": "code",
@@ -312,7 +312,7 @@
         "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →')\n",
         ")"
       ],
-      "id": "de1223f4",
+      "id": "b678266b",
       "execution_count": null,
       "outputs": []
     },
@@ -326,7 +326,7 @@
         "\n",
         "While this plot is useful, we can make it better. The x and y axes use the same units, but have different extents (the chart width is larger than the height) and different domains (0.001 to 100 for the x-axis, and 0.001 to 1,000 for the y-axis).\n"
       ],
-      "id": "9e99d444"
+      "id": "1bbaabb6"
     },
     {
       "cell_type": "code",
@@ -343,7 +343,7 @@
         "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →')\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "26b14255",
+      "id": "730b1c82",
       "execution_count": null,
       "outputs": []
     },
@@ -354,7 +354,7 @@
         "## reduce grid clutter with `alt.Axis(tickCount=5)`\n",
         "Also set `mark_circle(size=80)`"
       ],
-      "id": "cb0e513f"
+      "id": "8dadd4e2"
     },
     {
       "cell_type": "code",
@@ -373,7 +373,7 @@
         "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →')\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "d2848a7a",
+      "id": "21f53ae7",
       "execution_count": null,
       "outputs": []
     },
@@ -424,7 +424,7 @@
         "\n",
         "![Gram staining example](pictures/Gram_stain_01.jpg)\n"
       ],
-      "id": "20356b6e"
+      "id": "de22c0f2"
     },
     {
       "cell_type": "code",
@@ -432,7 +432,7 @@
       "source": [
         "antibiotics[['Gram_Staining']].tail()"
       ],
-      "id": "94d2f69c",
+      "id": "cb426eeb",
       "execution_count": null,
       "outputs": []
     },
@@ -443,7 +443,7 @@
         "## alt.Color('Gram_Staining:N')\n",
         "Let's encode `Gram_Staining` on the `color` channel as a nominal data type:"
       ],
-      "id": "28dc574e"
+      "id": "ae628ded"
     },
     {
       "cell_type": "code",
@@ -463,7 +463,7 @@
         "    alt.Color('Gram_Staining:N')\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "3b54ddc5",
+      "id": "d5bb78c5",
       "execution_count": null,
       "outputs": []
     },
@@ -477,7 +477,7 @@
         "\n",
         "However, we might wish to customize the colors used. In this case, we might want to use the colors that come out in lab when you do gram staining. Let's use those colors by specifying an explicit scale mapping from the data `domain` to the color `range`:\n"
       ],
-      "id": "5cc8be00"
+      "id": "c2364315"
     },
     {
       "cell_type": "code",
@@ -499,7 +499,7 @@
         "    )\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "6a666f39",
+      "id": "787035d3",
       "execution_count": null,
       "outputs": []
     },
@@ -509,7 +509,7 @@
       "source": [
         "## Color by Species I"
       ],
-      "id": "fef2374c"
+      "id": "ab19a334"
     },
     {
       "cell_type": "code",
@@ -529,7 +529,7 @@
         "    alt.Color('Bacteria:N')\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "d90e3ad6",
+      "id": "5fb936c0",
       "execution_count": null,
       "outputs": []
     },
@@ -544,7 +544,7 @@
         "\n",
         "Use `tableau20` so we have 20 colors instead of 10\n"
       ],
-      "id": "30f2d35d"
+      "id": "4b75ab84"
     },
     {
       "cell_type": "code",
@@ -565,7 +565,7 @@
         "          scale=alt.Scale(scheme='tableau20'))\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "510f97b2",
+      "id": "dbaeaf25",
       "execution_count": null,
       "outputs": []
     },
@@ -577,7 +577,7 @@
         "\n",
         "## Color by Species III -- color as `O`"
       ],
-      "id": "5d41c0da"
+      "id": "af53d7a4"
     },
     {
       "cell_type": "code",
@@ -597,7 +597,7 @@
         "    alt.Color('Bacteria:O')\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "0ca22216",
+      "id": "fbd9744d",
       "execution_count": null,
       "outputs": []
     },
@@ -617,7 +617,7 @@
         "\n",
         "This scheme increases both hue and luminance"
       ],
-      "id": "65be96bc"
+      "id": "32c07b41"
     },
     {
       "cell_type": "code",
@@ -638,7 +638,7 @@
         "          scale=alt.Scale(scheme='viridis'))\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "02af2434",
+      "id": "ccdac2e4",
       "execution_count": null,
       "outputs": []
     },
@@ -667,7 +667,7 @@
         "\n",
         "A more clear way to handle this is to use `mark_text()` to explicitly label each dot. However, that comes at the cost of adding a lot of chart clutter.\n"
       ],
-      "id": "375a1706"
+      "id": "78aed7fc"
     },
     {
       "cell_type": "code",
@@ -701,7 +701,7 @@
         "\n",
         "chart"
       ],
-      "id": "210ab6a6",
+      "id": "5799ae3e",
       "execution_count": null,
       "outputs": []
     },
@@ -715,7 +715,7 @@
         "\n",
         "Need to use `transform_calculate()` to extract `Genus`\n"
       ],
-      "id": "9b936d2f"
+      "id": "ee4b37df"
     },
     {
       "cell_type": "code",
@@ -738,7 +738,7 @@
         "          scale=alt.Scale(scheme='tableau20'))\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "c21a3136",
+      "id": "58517eaa",
       "execution_count": null,
       "outputs": []
     },
@@ -750,7 +750,7 @@
         "\n",
         "Recode infrequent `Genus` values to \"Other\".\n"
       ],
-      "id": "9e715da2"
+      "id": "42f8e106"
     },
     {
       "cell_type": "code",
@@ -778,7 +778,7 @@
         "          ))\n",
         ").properties(width=250, height=250)"
       ],
-      "id": "f1b356ae",
+      "id": "69102095",
       "execution_count": null,
       "outputs": []
     },
@@ -790,7 +790,7 @@
         "\n",
         "## Color by Antibiotic Response I\n"
       ],
-      "id": "f548bff5"
+      "id": "96168753"
     },
     {
       "cell_type": "code",
@@ -803,7 +803,7 @@
         "    alt.Color('Penicillin:Q')\n",
         ")"
       ],
-      "id": "e1b655d1",
+      "id": "802793ca",
       "execution_count": null,
       "outputs": []
     },
@@ -819,7 +819,7 @@
         "* format `alt.Y(... alt.Axis())`\n",
         "* format `alt.Color` with `plasma` color scheme, legend edits\n"
       ],
-      "id": "74b23e75"
+      "id": "2f5a3f4c"
     },
     {
       "cell_type": "code",
@@ -846,7 +846,7 @@
         "  offset=5        # set title offset from chart\n",
         ")"
       ],
-      "id": "66cab76c",
+      "id": "6377ff61",
       "execution_count": null,
       "outputs": []
     },
@@ -865,7 +865,7 @@
         "    * If you must have many categories, put annotation directly next to dots or create an interactive plot with a tooltip.\n",
         "    * Choose colors that are easy to discern (e.g. `viridis`, `plasma`)"
       ],
-      "id": "14069ad2"
+      "id": "1adb790b"
     }
   ],
   "metadata": {
