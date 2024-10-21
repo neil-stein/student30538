@@ -1,0 +1,881 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "title: \"Visualization (Scales and Guides)\"\n",
+        "author: \"Peter Ganong and Maggie Shi\"\n",
+        "date: today\n",
+        "date-format: long\n",
+        "format: \n",
+        "    html:\n",
+        "        echo: true\n",
+        "        toc: true\n",
+        "        eval: true\n",
+        "---\n",
+        "\n",
+        "<!--\n",
+        "    beamer:\n",
+        "        echo: true\n",
+        "        eval: true\n",
+        "        aspectratio: 169\n",
+        "        theme: default\n",
+        "        toc: true\n",
+        "        header-includes: \\renewcommand{\\tightlist}{\\setlength{\\itemsep}{5ex}\\setlength{\\parskip}{0pt}}\n",
+        "            \\setbeamertemplate{footline}[frame number] \n",
+        "            -->\n",
+        "\n",
+        "# Intro\n",
+        "\n",
+        "## roadmap\n",
+        "\n",
+        "* define scales and guides\n",
+        "* load and explain dataset\n",
+        "\n",
+        "(no summary at end because slides are self-contained)\n",
+        "\n",
+        "## scales and guides\n",
+        "\n",
+        "\"Visual encoding mapping data to visual variables such as position, size, shape, or color is the beating heart of data visualization.\"\n",
+        "\n",
+        "Two steps:\n",
+        "\n",
+        "1. *scale*: a function that takes a data value as input (the scale *domain*) and returns a visual value, such as a pixel position or RGB color, as output (the scale *range*). \n",
+        "2. *guide*: that allow readers to decode the graphic. Two types:\n",
+        "    * *axes* which visualize scales with spatial ranges \n",
+        "    * *legends* which visualize scales with color, size, or shape ranges\n",
+        "\n",
+        "## Dataset for this lecture: `antibiotics`\n",
+        "* Each row: a type of bacteria\n",
+        "* Each column: a type of antibiotic\n",
+        "* Each value: *minimum inhibitory concentration (MIC)* the concentration of antibiotic (in micrograms per milliliter) required to prevent growth in vitro. Lower values means antibiotic is *more effective*\n",
+        "* There are two other columns with the genus of the bacteria and the response to a lab procedure called \"gram staining\". We will come back to these later.\n",
+        "* \"In the fall of 1951, Will Burtin published this graph showing the effectiveness of three popular antibiotics on 16 different bacteria, measured in terms of minimum inhibitory concentration.\" [source](http://borgar.net/s/2016/03/will-burtins-antibiotics/)\n",
+        "\n",
+        "![](pictures/burtin.png)\n",
+        "\n",
+        "Discussion questions\n",
+        "\n",
+        "* headline? (aka the main message)\n",
+        "* sub-messages? (other information one can learn beyond the main message)\n",
+        "\n",
+        "## Our research questions \n",
+        "We will dive deeper into his data with the following research questions: \n",
+        "\n",
+        "1. How effective is neomycin against different types of bacteria?\n",
+        "2. How does neomycin compare to other antibiotics, such as streptomycin and penicillin?\n",
+        "3. For which types of bacteria are neomycin and penicillin effective?\n"
+      ],
+      "id": "04331b63"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import pandas as pd\n",
+        "import altair as alt"
+      ],
+      "id": "83e0b056",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| eval: false\n",
+        "antibiotics = 'https://cdn.jsdelivr.net/npm/vega-datasets@1/data/burtin.json'\n",
+        "pd.read_json(antibiotics)"
+      ],
+      "id": "5543a6f1",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "antibiotics = pd.read_json('data/burtin.json')"
+      ],
+      "id": "e9853b54",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "antibiotics[['Bacteria', 'Penicillin', 'Streptomycin', 'Neomycin']].head()"
+      ],
+      "id": "41c26dfe",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Discussion questions: \n",
+        "\n",
+        "* are these data \"tidy\"? \n",
+        "* if no, how would you tidy them?\n",
+        "\n",
+        "\n",
+        "\n",
+        "# Configuring Scales and Axes\n",
+        "\n",
+        "## Configuring Scales and Axes: roadmap\n",
+        "\n",
+        "* manipulate `alt.Scale()`\n",
+        "* clarify the meaning implied by an axis\n",
+        "* change the length (`domain`) of an axis\n",
+        "* change grid lines via `alt.Axis()`\n",
+        "\n",
+        "## Plotting Antibiotic Resistance: Adjusting the Scale Type\n",
+        "\n",
+        "Default scale is linear"
+      ],
+      "id": "6d76b9d3"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle().encode(\n",
+        "    alt.X('Neomycin:Q')\n",
+        ")"
+      ],
+      "id": "943acde0",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Discussion question: why is this plot hard to read?\n",
+        "\n",
+        "\n",
+        "## alt scale I"
+      ],
+      "id": "778319eb"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle().encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          scale=alt.Scale(type='sqrt'))\n",
+        ")"
+      ],
+      "id": "7bf37955",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## alt scale II"
+      ],
+      "id": "8d0c38cf"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle().encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          scale=alt.Scale(type='log'))\n",
+        ")"
+      ],
+      "id": "431c7d3d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Discussion question: what does this plot do well? What is confusing about it?\n",
+        "\n",
+        "\n",
+        "\n",
+        "## Styling an Axis\n",
+        "\n",
+        "* Lower dosages indicate higher effectiveness. However, many readers will expect values that are \"better\" to be \"up and to the right\" within a chart. \n",
+        "* If we want to cater to this convention set the encoding `sort` property to `'descending'`:\n"
+      ],
+      "id": "e4b728fd"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle().encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log'))\n",
+        ")"
+      ],
+      "id": "6b8d0189",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## add a clarifying title"
+      ],
+      "id": "053e92e9"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle().encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log'),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →')\n",
+        ")"
+      ],
+      "id": "0842452a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Editorial remark: the textbook suggests a title of \"Neomycin MIC (μg/ml, reverse log scale)\". This is accurate, but I don't know it helps the reader that much. \n",
+        "\n",
+        "1. The fact that it is a log scale is self-evident. So is the fact that it is reversed.\n",
+        "2. What the reader really wants to know is which direction is \"good\". Just tell them that directly.\n",
+        "\n",
+        "## Comparing Antibiotics: Adjusting Grid Lines, Tick Counts, and Sizing\n",
+        "\n",
+        "_How does neomycin compare to streptomycin?_\n",
+        "\n",
+        "Question for the class: what does each point repesent?\n"
+      ],
+      "id": "4bdfd753"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle().encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log'),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Streptomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log'),\n",
+        "          title='← Less effective --- Streptomycin MIC (μg/ml) --- more effective →')\n",
+        ")"
+      ],
+      "id": "d7076e30",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "This plot shows that bacteria responds similarly to these two antibiotics -- it approximately follows the 45-degree line.\n",
+        "\n",
+        "\n",
+        "\n",
+        "_How does neomycin compare to penicillin?_\n"
+      ],
+      "id": "e35df7ac"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle().encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log'),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log'),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →')\n",
+        ")"
+      ],
+      "id": "de1223f4",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "_Now we see a more differentiated response: some bacteria respond well to neomycin but not penicillin, and vice versa!_\n",
+        "\n",
+        "## fix `domain`, equalize aspect ratio\n",
+        "\n",
+        "While this plot is useful, we can make it better. The x and y axes use the same units, but have different extents (the chart width is larger than the height) and different domains (0.001 to 100 for the x-axis, and 0.001 to 1,000 for the y-axis).\n"
+      ],
+      "id": "9e99d444"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle().encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →')\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "26b14255",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## reduce grid clutter with `alt.Axis(tickCount=5)`\n",
+        "Also set `mark_circle(size=80)`"
+      ],
+      "id": "cb0e513f"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle(size=80).encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →')\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "d2848a7a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Discussion questions: 1) What questions does this plot answer? 2) What further questions does this plot raise?\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n",
+        "## Configuring Scales and Axes: summary \n",
+        "\n",
+        "How to make your axes and grids as informative as possible\n",
+        "\n",
+        "* Choose an `alt.Scale()` that reveals differences between the data (in most cases...)\n",
+        "* Axis titles should clarify meaning\n",
+        "* Deliberately choose axis length via `domain` argument\n",
+        "* Reduce grid clutter  via `alt.Axis()`\n",
+        "\n",
+        "# Configuring Color Legends\n",
+        "\n",
+        "## Configuring Color Legends: roadmap and warning\n",
+        "* Visualization as a tool for discovery\n",
+        "* `alt.Color()` in legends\n",
+        "    * binary variable\n",
+        "    * text data (every dot is different)\n",
+        "    * groups\n",
+        "* use color to encode quantitative values\n",
+        "\n",
+        "Remarks: \n",
+        "\n",
+        "* This section of the textbook asks you to practice your \"skepticism\" muscle. What we mean by that is that it is mostly about showing what does *not* work. we will follow the textbook, but for many of the plots,  your first question should not be \"where would I want to use this tool?\" but rather \"why is this not a good idea?\"\n",
+        "* The official title of this section of lecture is about color legends, but the deeper lessons are about how to clean data to uncover and communciate structure\n",
+        "\n",
+        "## Visualization as a tool for discovery\n",
+        "\n",
+        "* Above we saw that neomycin is more effective for some bacteria, while penicillin is more effective for others. \n",
+        "* Is there any systematic answer to what types of bacteria each drug is more effective for? This is the kind of question for which data visualization shines.\n",
+        "* If we just stared at a table in Excel or Pandas, it might be hard to see patterns (and at the very least it would take awhile). Until now, almost everything we have seen for data visualization has been about **communication**. Now, we are going to see how data visualization can be a tool for **discovery**.\n",
+        "\n",
+        "## Gram staining\n",
+        "\n",
+        "Let's start by looking at one of the other columns in the data frame (which we have ignored until now). \n",
+        "\n",
+        "A tiny bit of science: the reaction of the bacteria to a procedure called [Gram staining](https://en.wikipedia.org/wiki/Gram_stain) is described by the nominal field `Gram_Staining`. Bacteria that turn dark blue or violet are Gram-positive. Otherwise, they are Gram-negative.\n",
+        "\n",
+        "![Gram staining example](pictures/Gram_stain_01.jpg)\n"
+      ],
+      "id": "20356b6e"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "antibiotics[['Gram_Staining']].tail()"
+      ],
+      "id": "94d2f69c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## alt.Color('Gram_Staining:N')\n",
+        "Let's encode `Gram_Staining` on the `color` channel as a nominal data type:"
+      ],
+      "id": "28dc574e"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle(size=80).encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Color('Gram_Staining:N')\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "3b54ddc5",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "We can see that Gram-positive bacteria seem most susceptible to penicillin, whereas neomycin is more effective for Gram-negative bacteria!\n",
+        "\n",
+        "## Sometimes helpful trick: choose colors with external meaning\n",
+        "\n",
+        "However, we might wish to customize the colors used. In this case, we might want to use the colors that come out in lab when you do gram staining. Let's use those colors by specifying an explicit scale mapping from the data `domain` to the color `range`:\n"
+      ],
+      "id": "5cc8be00"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle(size=80).encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Color('Gram_Staining:N',\n",
+        "          scale=alt.Scale(domain=['negative', 'positive'], range=['hotpink', 'purple'])\n",
+        "    )\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "6a666f39",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Color by Species I"
+      ],
+      "id": "fef2374c"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle(size=80).encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Color('Bacteria:N')\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "d90e3ad6",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Discussion question: what's wrong with this plot?\n",
+        "\n",
+        "\n",
+        "## Color by Species II \n",
+        "\n",
+        "Use `tableau20` so we have 20 colors instead of 10\n"
+      ],
+      "id": "30f2d35d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle(size=80).encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Color('Bacteria:N',\n",
+        "          scale=alt.Scale(scheme='tableau20'))\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "510f97b2",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Problem with this plot: bacteria that are similar (all in the \"staph\" family) have very different colors\n",
+        "\n",
+        "## Color by Species III -- color as `O`"
+      ],
+      "id": "5d41c0da"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle(size=80).encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Color('Bacteria:O')\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "0ca22216",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Problems with this plot: \n",
+        "\n",
+        "1. the blue shades are hard to distinguish from one another.\n",
+        "2. although it is nice to assign similar colors to bacteria in the same family, this legend also assigns similar colors to bacteria that are not in the same family\n",
+        "\n",
+        "A partial solution to (1) is to use a different color scheme\n",
+        "\n",
+        "\n",
+        "## Color by Species IV -- use `viridis` \n",
+        "\n",
+        "This scheme increases both hue and luminance"
+      ],
+      "id": "65be96bc"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle(size=80).encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Color('Bacteria:O',\n",
+        "          scale=alt.Scale(scheme='viridis'))\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "02af2434",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Discussion questions\n",
+        "\n",
+        "Examples III and IV are jury-rigged to work nicely. They work because\n",
+        "\n",
+        "* legend is ordered alphabetically\n",
+        "* bacteria family is at the beginning of the name of each strain.\n",
+        "\n",
+        "Suppose instead that the family was instead at the *end* of the name\n",
+        "\n",
+        "| bacteria name | \n",
+        "| --- | \n",
+        "| Viridans, streptococcus |\n",
+        "| Hemolycticus, Streptococcus |\n",
+        "\n",
+        "Let's troubleshoot in real-time. How would you get the color scheme to align with family? There's more than one good way to do this.\n",
+        "\n",
+        "\n",
+        "## Text Labels by Species \n",
+        "\n",
+        "A more clear way to handle this is to use `mark_text()` to explicitly label each dot. However, that comes at the cost of adding a lot of chart clutter.\n"
+      ],
+      "id": "375a1706"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "base = alt.Chart(antibiotics).mark_circle(size=80).encode(\n",
+        "    alt.X('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Streptomycin:Q',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='Streptomycin MIC (μg/ml, reverse log scale)'),\n",
+        "    alt.Color('Bacteria:N', legend=None)\n",
+        ").properties(width=250, height=250)\n",
+        "\n",
+        "# Add text labels next to each dot\n",
+        "text = base.mark_text(\n",
+        "    align='left',\n",
+        "    baseline='middle',\n",
+        "    dx=7,  # Adjust the position of the text\n",
+        "    dy=-5\n",
+        ").encode(\n",
+        "    text='Bacteria:O'\n",
+        ")\n",
+        "\n",
+        "# Combine the base chart with the text labels\n",
+        "chart = base + text\n",
+        "\n",
+        "chart"
+      ],
+      "id": "210ab6a6",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Discussion question -- What is another way we have seen to make it possible for the reader to see what each dot is labeled, but using less clutter?\n",
+        "\n",
+        "## Color by Genus I\n",
+        "\n",
+        "Need to use `transform_calculate()` to extract `Genus`\n"
+      ],
+      "id": "9b936d2f"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle(size=80).transform_calculate(\n",
+        "    Genus='split(datum.Bacteria, \" \")[0]'\n",
+        ").encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Color('Genus:N',\n",
+        "          scale=alt.Scale(scheme='tableau20'))\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "c21a3136",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Color by Genus II\n",
+        "\n",
+        "Recode infrequent `Genus` values to \"Other\".\n"
+      ],
+      "id": "9e715da2"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_circle(size=80).transform_calculate(\n",
+        "  Split='split(datum.Bacteria, \" \")[0]'\n",
+        ").transform_calculate(\n",
+        "  Genus='indexof([\"Salmonella\", \"Staphylococcus\", \"Streptococcus\"], datum.Split) >= 0 ? datum.Split : \"Other\"'\n",
+        ").encode(\n",
+        "    alt.X('Neomycin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Neomycin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Y('Penicillin:Q',\n",
+        "          sort='descending',\n",
+        "          scale=alt.Scale(type='log', domain=[0.001, 1000]),\n",
+        "          axis=alt.Axis(tickCount=5),\n",
+        "          title='← Less effective --- Penicillin MIC (μg/ml) --- more effective →'),\n",
+        "    alt.Color('Genus:N',\n",
+        "          scale=alt.Scale(\n",
+        "            domain=['Salmonella', 'Staphylococcus', 'Streptococcus', 'Other'],\n",
+        "            range=['rgb(76,120,168)', 'rgb(84,162,75)', 'rgb(228,87,86)', 'rgb(121,112,110)']\n",
+        "          ))\n",
+        ").properties(width=250, height=250)"
+      ],
+      "id": "f1b356ae",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        " Remark: the `antibiotics` dataset actually already comes with a column called `Genus` but the textbook recreates it in the code block above in order to show you how to add categories as part of a single code block in vega.\n",
+        "\n",
+        "## Color by Antibiotic Response I\n"
+      ],
+      "id": "f548bff5"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics).mark_rect().encode(\n",
+        "    alt.Y('Bacteria:N',\n",
+        "      sort=alt.EncodingSortField(field='Penicillin', op='max', order='descending')\n",
+        "    ),\n",
+        "    alt.Color('Penicillin:Q')\n",
+        ")"
+      ],
+      "id": "e1b655d1",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Color by Antibiotic Response II\n",
+        "\n",
+        "Cosmetic improvements:\n",
+        "\n",
+        "* add plot title\n",
+        "* format `alt.Y(... alt.Axis())`\n",
+        "* format `alt.Color` with `plasma` color scheme, legend edits\n"
+      ],
+      "id": "74b23e75"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "alt.Chart(antibiotics, title='Penicillin Resistance of Bacterial Strains').mark_rect().encode(\n",
+        "    alt.Y('Bacteria:N',\n",
+        "      sort=alt.EncodingSortField(field='Penicillin', op='max', order='descending'),\n",
+        "      axis=alt.Axis(\n",
+        "        orient='right',     # orient axis on right side of chart\n",
+        "        titleX=7,           # set x-position to 7 pixels right of chart\n",
+        "        titleY=-2,          # set y-position to 2 pixels above chart\n",
+        "        titleAlign='left',  # use left-aligned text\n",
+        "        titleAngle=0        # undo default title rotation\n",
+        "      )\n",
+        "    ),\n",
+        "    alt.Color('Penicillin:Q',\n",
+        "      scale=alt.Scale(type='log', scheme='plasma', nice=True),\n",
+        "      legend=alt.Legend(titleOrient='right', tickCount=5),\n",
+        "      title='Penicillin MIC (μg/ml)'\n",
+        "    )\n",
+        ").configure_title(\n",
+        "  anchor='start', # anchor and left-align title\n",
+        "  offset=5        # set title offset from chart\n",
+        ")"
+      ],
+      "id": "66cab76c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Configuring Color Legends: summary\n",
+        "* Overarching idea: visualization as a tool for discovery\n",
+        "* Avoid\n",
+        "    * Too many groups in a legend\n",
+        "    * Colors that are too similar for groups that are actually dissimilar (e.g. when the underlying variable is `N`ominal)  \n",
+        "* Strive to\n",
+        "    * Choose colors with external meaning (e.g. gram staining)\n",
+        "    * Construct categorical variables (e.g. `Genus`)\n",
+        "    * If you must have many categories, put annotation directly next to dots or create an interactive plot with a tooltip.\n",
+        "    * Choose colors that are easy to discern (e.g. `viridis`, `plasma`)"
+      ],
+      "id": "14069ad2"
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "python3",
+      "language": "python",
+      "display_name": "Python 3 (ipykernel)",
+      "path": "/Users/neilstein/Library/Python/3.12/share/jupyter/kernels/python3"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
