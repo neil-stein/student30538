@@ -117,20 +117,66 @@ for col in waze_df.columns[:-3]:
 | magvar | Nominal |
 | reportRating | Nominal or Ordinal |
 
-
-
 2. 
 
 ```{python}
+import pandas as pd
+import altair as alt
+import zipfile
 
+# unzipping the full dataset
+waze_path = "/Users/neilstein/Documents/Academic/Fall 24/Python II/student30538-2/problem_sets/ps6/waze_data.zip"
+with zipfile.ZipFile(waze_path, "r") as zip_ref:
+  with zip_ref.open("waze_data.csv", "r") as file:
+    full_waze_df = pd.read_csv(file)
+
+# counting of NA vs. present values
+counts_df = full_waze_df.isnull().sum().to_frame("NA")
+counts_df["Present"] = full_waze_df.shape[0] - counts_df["NA"]
+counts_df = counts_df.reset_index().rename(columns={"index": "Column_Name"})
+
+# Melt the DataFrame for Altair
+waze_df_melted = counts_df.melt(id_vars= "Column_Name", var_name= "Value_Type", value_name= "Count")
+
+# Create the stacked bar chart using Altair
+waze_NA_chart = alt.Chart(waze_df_melted).mark_bar().encode(
+    x= "Column_Name",
+    y= "Count",
+    color= "Value_Type"
+).properties(
+    title= "NA and non-NA Value Counts per Column"
+)
+waze_NA_chart.show()
 ```
+
+Interpretation -- we can observe from the chart that nThumbsUp is almost entirely missing (99% null value), whereas the other columns that are missing values, street and subtype, are only missing at ~2% and ~12% of the total values. 
 
 3. 
 
 ```{python}
+import pandas as pd
 
+# finding unique value for 'Type' and 'Subtype'
+type_unique = full_waze_df["type"].unique().tolist()
+subtype_unique = full_waze_df["subtype"].unique().tolist()
+print(type_unique)
+print(subtype_unique)
+
+# counting combinations
+waze_combo_df = full_waze_df.copy()
+waze_combo_df.fillna("Missing", inplace= True) # without this, NA is dropped
+
+type_grouping = waze_combo_df.groupby(["type", "subtype"]).size().reset_index(name= "count")
+print(type_grouping)
 ```
 
+```{markdown}
+# Question 3 detailed responses
+1) There are 4 types that have a subtype NA ("missing" in my code)
+2) There are several columns that we can reasonable see containing sub-subtypes, 
+
+
+```
 4. 
 
 1. 

@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 app_ui = ui.page_fluid(
     ui.input_select(id = 'state', label = 'Choose a state:',
     choices = ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"]),
+    ui.input_radio_buttons(id= "index", label= "Choose metric",choices= ["cases", "deaths"], selected= "cases", inline= False, width= None),
     ui.output_plot('ts'),
     ui.output_table("subsetted_data_table")
-
 )
 
 
@@ -30,7 +30,7 @@ def server(input, output, session):
     def ts():
         df = subsetted_data()
         fig, ax = plt.subplots(figsize=(3,6))
-        ax.plot(df['date'], df['cases'])
+        ax.plot(df['date'], df[input.index()])
         ax.tick_params(axis = 'x', rotation = 45)
         ax.set_xlabel('Date')
         ax.set_ylabel('Cases')
