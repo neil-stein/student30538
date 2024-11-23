@@ -24,9 +24,9 @@ We use (`*`) to indicate a problem that we think might be time consuming.
 # Steps to submit (10 points on PS6) {-}
 
 1. "This submission is my work alone and complies with the 30538 integrity
-policy." Add your initials to indicate your agreement: \*\*\_\_\*\*
-2. "I have uploaded the names of anyone I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  \*\*\_\_\*\* (2 point)
-3. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
+policy." # NS #
+2. "I have uploaded the names of anyone I worked with on the problem set ** # N/A#
+3. Late coins used this pset: 0
 
 4. Before starting the problem set, make sure to read and agree to the terms of data usage for the Waze data [here](https://canvas.uchicago.edu/courses/59054/quizzes/130617).
 
@@ -164,7 +164,7 @@ print(subtype_unique)
 
 # counting combinations
 waze_combo_df = full_waze_df.copy()
-waze_combo_df.fillna("Missing", inplace= True) # without this, NA is dropped
+waze_combo_df.fillna("Unclassified", inplace= True) # without this, NA is dropped
 
 type_grouping = waze_combo_df.groupby(["type", "subtype"]).size().reset_index(name= "count")
 print(type_grouping)
@@ -172,36 +172,94 @@ print(type_grouping)
 
 ```{markdown}
 # Question 3 detailed responses
-1) There are 4 types that have a subtype NA ("missing" in my code)
-2) There are several columns that we can reasonable see containing sub-subtypes, 
+1) There are 4 types that have a subtype NA ("Unclassified" in my code)
+
+2) There are several columns that we can reasonable see containing sub-subtypes, these include:
+- HAZARD_ON_ROAD: this is a subtype that contains several different hazards occuring on the road, including:
+  - EMERGENCY_VEHICLE
+  - ICE
+  - LANE_CLOSED
+  - OBJECT
+  - POT_HOLE
+  - ROAD_KILL
+  - TRAFFIC_LIGHT
+- HAZARD_ON_SHOULDER: this is a subtype containing different traffic issues, such as:
+  - ANIMALS
+  - CAR_STOPPED
+  - MISSING_SIGN
+- HAZARD_WEATHER: there is a general category, as well as specific sub-subtypes
+  - FLOOD
+  - FOG
+  - HAIL
+  - HEAVY_SNOW
+Looking at the remaining fields, there does not appear to be a sub-subtype as they are all specific variations of a subtype.
+
+3) The missing or "NA" subtypes appear to be a relatively small portion of the HAZARD type, whereas they are a far bigger proportion of the ROAD_CLOSE and JAM type, so my intuition here is that for the Hazard type there is enough specificity where the driver was able to quickly select a menu item, whereas it can be much harder for a driver to objectively rank the severity of a traffic jam or to know exactly the reasoning behind a road closure, so they would more likely choose a generic option. Hazards, especially of the types listed here, should be much easier to diagnose quickly!
 
 
+I will be keeping the missing values in my data and have already marked them as unclassified in a prior step (3)
 ```
+
+
 4. 
 
-1. 
 ```{python}
+import pandas as pd
 
+# crosswalk creation (a) -- ignoring instructions, they are moot
+crosswalk_df = type_grouping.copy()
+crosswalk_df["updated_type"] = ""
+crosswalk_df["updated_subtype"] = ""
+crosswalk_df["updated_subsubtype"] = ""
+
+# filling the crosswalk (b)
+crosswalk_df["updated_type"] = crosswalk_df["type"]
+
+
+for index, row in crosswalk_df.iterrows():
+    subtype = row["subtype"]
+    
+    if "HAZARD_ON_ROAD_" in subtype:
+        split_index = subtype.index("HAZARD_ON_ROAD_")
+        crosswalk_df.at[index, "updated_subtype"] = subtype[:split_index]
+        crosswalk_df.at[index, "updated_subsubtype"] = subtype[split_index+len("HAZARD_ON_ROAD_"):]
+    elif "HAZARD_ON_SHOULDER_" in subtype:
+        split_index = subtype.index("HAZARD_ON_SHOULDER_")
+        crosswalk_df.at[index, "updated_subtype"] = subtype[:split_index]
+        crosswalk_df.at[index, "updated_subsubtype"] = subtype[split_index+len("HAZARD_ON_SHOULDER_"):]
+    elif "HAZARD_WEATHER_" in subtype:
+        split_index = subtype.index("HAZARD_WEATHER_")
+        crosswalk_df.at[index, "updated_subtype"] = subtype[:split_index]
+        crosswalk_df.at[index, "updated_subsubtype"] = subtype[split_index+len("HAZARD_WEATHER_"):]
+    else:
+        crosswalk_df.at[index, "updated_subtype"] = subtype
+        crosswalk_df.at[index, "updated_subsubtype"] = ""
+
+    # initial results ended up with empty columns, adding a corrective loop
+    if not row["updated_subtype"]:
+        if "HAZARD_ON_ROAD_" in row["subtype"]:
+            crosswalk_df.at[index, "updated_subtype"] = "HAZARD_ON_ROAD"
+        elif "HAZARD_ON_SHOULDER_" in row["subtype"]:
+            crosswalk_df.at[index, "updated_subtype"] = "HAZARD_ON_SHOULDER"
+        elif "HAZARD_WEATHER_" in row["subtype"]:
+            crosswalk_df.at[index, "updated_subtype"] = "HAZARD_WEATHER"
+
+# merging the crosswalk (c) -- original instructions don't make logical sense, switching to a full df and not a 32 row version
+waze_merged_df = full_waze_df.copy()
+
+mapping_dict = crosswalk_df.set_index(["type", "subtype"]).to_dict(orient= "index")
+
+for index, row in waze_merged_df.iterrows():
+    key = (row["type"], row["subtype"])
+    if key in mapping_dict:
+        waze_merged_df.at[index, "updated_type"] = mapping_dict[key]["updated_type"]
+        waze_merged_df.at[index, "updated_subtype"] = mapping_dict[key]["updated_subtype"]
+
+# counting the accident + na values
+for index, row in type_grouping.iterrows():
+    if row["type"] == "ACCIDENT" and row["subtype"] == "Unclassified":
+        print(f"The count for ACCIDENT and Unclassified is: {row['count']}")
 ```
-
-2. 
-
-```{python}
-
-```
-
-3. 
-
-```{python}
-
-```
-
-4. 
-
-```{python}
-
-```
-
 
 # App #1: Top Location by Alert Type Dashboard (30 points){-}
 
@@ -209,19 +267,67 @@ print(type_grouping)
 
 a. 
 ```{python}
+import pandas as pd
+import re
 
+# per the prompt, I asked Chat GPT "how can I use regular expressions to extract the latitude and longitude into two new columns of data from a dataset where it is currently stored like this: "POINT(-87.676685 41.929692)""
+
+# regular expression function creation
+def extract_coordinates(geo_str):
+    match = re.search(r"\((-?\d+\.\d+)\s(-?\d+\.\d+)\)", geo_str)
+    if match:
+        return match.group(1), match.group(2)
+    else:
+        return None, None
+
+# applying the function to the full dataframe
+waze_merged_df[["latitude", "longitude"]] = waze_merged_df["geo"].apply(extract_coordinates).apply(pd.Series)
 ```
 
 b. 
 ```{python}
+import pandas as pd
+import numpy as np
+
+# binning the latitude and longitudes
+waze_merged_df["latitude"] = pd.to_numeric(waze_merged_df["latitude"], errors= "coerce")
+waze_merged_df["longitude"] = pd.to_numeric(waze_merged_df["longitude"], errors= "coerce")
+
+
+bins = np.arange(-180, 181, 0.01)
+waze_merged_df["lat_bin"] = pd.cut(waze_merged_df["latitude"], bins= bins)
+waze_merged_df["long_bin"] = pd.cut(waze_merged_df["longitude"], bins= bins)
+
+
+# chekcing for the most frequently observed lat-long combo
+lat_long_combo = waze_merged_df.groupby(["lat_bin", "long_bin"]).size().reset_index(name= "count")
+most_freq= lat_long_combo.loc[lat_long_combo["count"].idxmax()]
+
+print(f"Most frequent lat-long combo: Latitude={most_freq['lat_bin']}, Longitude={most_freq['long_bin']}, with {most_freq['count']} observations")
 
 ```
 
 
 c. 
 ```{python}
+import pandas as pd
+import numpy as np
 
+# aggregation to the top 10 lat-long bins -- choosing HAZARD_ON_SHOULDER_CAR_STOPPED as my preferred chosen alert as it has the most samples
+hazard_waze = waze_merged_df[waze_merged_df["subtype"] == "HAZARD_ON_SHOULDER_CAR_STOPPED"]
+
+# checking tigheter bins (fewer decimal points)
+new_bins = np.arange(-180, 181, 0.1)
+hazard_waze["lat_bin"] = pd.cut(hazard_waze["latitude"], bins= new_bins)
+hazard_waze["long_bin"] = pd.cut(hazard_waze["longitude"], bins= new_bins)
+
+hazard_grouping_df = hazard_waze.groupby(["lat_bin", "long_bin"]).size().reset_index(name= "count")
+hazard_top_10 = hazard_grouping_df.sort_values(by= "count", ascending=False).head(10)
 ```
+
+This approach, while somewhat understandable given the length of the dataframe, fails the logic test of being useful. These bins are accurately holding data, aggregated to the top ten categories, however the useful-ness of this data is next to zero as in order to do so we had to blur the geospatial precision, leading to dots that will be too large to be meaningful. 
+
+
 
 d. 
 ```{python}
@@ -262,6 +368,7 @@ geo_data = alt.Data(values=chicago_geojson["features"])
 a. 
 
 ```{python}
+from shiny import App, render, ui
 
 ```
 
